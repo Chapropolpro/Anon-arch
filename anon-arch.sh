@@ -10,15 +10,42 @@ echo "[1/9] Обновление системы"
 pacman -Syu --noconfirm
 
 echo "[2/9] Установка необходимых пакетов (если не установлены)"
-pacman -S --needed --noconfirm macchanger systemd-zram-generator
+pacman -S --needed --noconfirm macchanger util-linux
 
-echo "[3/9] Включение zram (сжатый swap в RAM)"
-mkdir -p /etc/systemd/zram-generator.conf.d
-cat <<EOF > /etc/systemd/zram-generator.conf.d/zram.conf
-[zram0]
-zram-size = ram
-compression-algorithm = zstd
+echo "[3/9] Настройка ZRAM вручную без systemd-zram-generator"
+
+# Создаём systemd-юнит для zram
+cat <<'EOF' > /etc/systemd/system/zram-swap.service
+[Unit]
+Description=ZRAM Swap
+After=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/usr/local/bin/setup-zram.sh
+ExecStop=/usr/bin/swapoff /dev/zram0
+
+[Install]
+WantedBy=multi-user.target
 EOF
+
+# Скрипт инициализации zram
+cat <<'EOF' > /usr/local/bin/setup-zram.sh
+#!/bin/bash
+modprobe zram
+echo lz4 > /sys/block/zram0/comp_algorithm
+echo $(($(grep MemTotal /proc/meminfo | awk '{print $2}') * 1024 / 2)) > /sys/block/zram0/disksize
+mkswap /dev/zram0
+swapon /dev/zram0
+EOF
+
+chmod +x /usr/local/bin/setup-zram.sh
+
+# Включаем сервис
+systemctl daemon-reexec
+systemctl daemon-reload
+systemctl enable --now zram-swap.service
 
 echo "[4/9] Отключение systemd-resolved (DNS-прокси)"
 systemctl disable --now systemd-resolved.service 2>/dev/null || true
@@ -46,7 +73,7 @@ net.ipv6.conf.default.disable_ipv6 = 1
 EOF
 sysctl --system
 
-echo "[8/9] Удаление деанон-пакетов (если есть)"
+echo "[8/9] Удаление мусорных пакетов (если есть)"
 for pkg in geoclue networkmanager-qt packagekit tracker modemmanager blueman zeitgeist; do
   if pacman -Qs "$pkg" > /dev/null; then
     echo "Удаление $pkg"
@@ -57,4 +84,4 @@ done
 echo "[9/9] Очистка кэша pacman"
 pacman -Scc --noconfirm
 
-echo "Готово. Система очищена, анонимизирована и оптимизирована для безопасной и повседневной работы."
+echo "Готово!"
