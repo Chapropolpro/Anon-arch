@@ -1,2 +1,3 @@
 # Anon-arch
-Script thar makes your Arch (or arch-based distro) more anonymous
+[EN] Script thar makes Arch linux (or arch-based distro) more anonymous
+[RU] Скрипт который делает Arch linux (или дистро на базе Arch) более анонимным
