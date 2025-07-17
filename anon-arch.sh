@@ -75,7 +75,7 @@ sysctl --system
 
 echo "[8/9] Удаление мусорных пакетов (если есть)"
 for pkg in geoclue networkmanager-qt packagekit modemmanager blueman zeitgeist; do
-  if pacman -Qs "$pkg" > /dev/null; then
+  if pacman -Qq "$pkg" > /dev/null; then
     echo "Удаление $pkg"
     pacman -Rns --noconfirm "$pkg"
   fi
