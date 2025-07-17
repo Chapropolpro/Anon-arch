@@ -9,11 +9,10 @@ fi
 echo "[1/9] Обновление системы"
 pacman -Syu --noconfirm
 
-echo "[2/9] Установка необходимых пакетов (если не установлены)"
+echo "[2/9] Установка необходимых пакетов"
 pacman -S --needed --noconfirm macchanger util-linux
 
-echo "[3/9] Настройка ZRAM вручную без systemd-zram-generator"
-
+echo "[3/9] Настройка ZRAM"
 # Создаём systemd-юнит для zram
 cat <<'EOF' > /etc/systemd/system/zram-swap.service
 [Unit]
@@ -73,7 +72,7 @@ net.ipv6.conf.default.disable_ipv6 = 1
 EOF
 sysctl --system
 
-echo "[8/9] Удаление мусорных пакетов (если есть)"
+echo "[8/9] Удаление деанон пакетов (если есть)"
 for pkg in geoclue networkmanager-qt packagekit modemmanager blueman zeitgeist; do
   if pacman -Qq | grep -qx "$pkg"; then
     echo "Удаление $pkg"
