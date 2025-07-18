@@ -10,41 +10,19 @@ echo "[1/9] Обновление системы"
 pacman -Syu --noconfirm
 
 echo "[2/9] Установка необходимых пакетов"
-pacman -S --needed --noconfirm macchanger util-linux
+pacman -S --needed --noconfirm macchanger util-linux zram-generator
 
 echo "[3/9] Настройка ZRAM"
 # Создаём systemd-юнит для zram
-cat <<'EOF' > /etc/systemd/system/zram-swap.service
-[Unit]
-Description=ZRAM Swap
-After=multi-user.target
-
-[Service]
-Type=oneshot
-RemainAfterExit=true
-ExecStart=/usr/local/bin/setup-zram.sh
-ExecStop=/usr/bin/swapoff /dev/zram0
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Скрипт инициализации zram
-cat <<'EOF' > /usr/local/bin/setup-zram.sh
-#!/bin/bash
-modprobe zram
-echo lz4 > /sys/block/zram0/comp_algorithm
-echo $(($(grep MemTotal /proc/meminfo | awk '{print $2}') * 1024 / 2)) > /sys/block/zram0/disksize
-mkswap /dev/zram0
-swapon /dev/zram0
-EOF
-
-chmod +x /usr/local/bin/setup-zram.sh
-
-# Включаем сервис
-systemctl daemon-reexec
+cat > /etc/systemd/zram-generator.conf << 'EOL'
+[zram0]
+zram-size = ram
+compression-algorithm = zstd
+swap-priority = 100
+fs-type = swap
+EOL
 systemctl daemon-reload
-systemctl enable --now zram-swap.service
+systemctl start /dev/zram0
 
 echo "[4/9] Отключение systemd-resolved (DNS-прокси)"
 systemctl disable --now systemd-resolved.service 2>/dev/null || true
